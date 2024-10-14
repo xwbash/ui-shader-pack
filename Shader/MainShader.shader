@@ -1,12 +1,22 @@
-Shader "Unlit/BlurShader"
+Shader "Unlit/MainShader"
 {
     Properties
     {
+        [Header(Blur)]
+        [Space(5)]
         _MainTex ("Texture", 2D) = "white" {}
+        [MaterialToggle] _BlurActive ("BlurActive", Float) = 0
+        [MaterialToggle] _Optimized ("Optimized", Float) = 0
         _BlendFactor ("BlendFactor", Range(0, 1)) = 0.25 
         _BlurRadius ("BlendRadius", Range(0, 1)) = 0.25 
         _BlurStep ("BlurStep", Float) = 4 
-        [MaterialToggle] _Optimized ("Optimized", Float) = 0 
+
+        [Space(20)]
+        [Header(Brightness)]
+        [Space(5)]
+        //Brightness
+        [MaterialToggle] _BrightnessActive ("BrightnessActive", Float) = 0
+        _BrightnessAmount ("BrightnessAmount", Float) = 0.25 
     }
     SubShader
     {
@@ -37,10 +47,17 @@ Shader "Unlit/BlurShader"
 
             sampler2D _MainTex;
             float4 _MainTex_ST;
+
+            // Blur
             float _BlendFactor;  
             float _BlurRadius;  
             float _BlurStep;  
             float _Optimized;
+            float _BlurActive;
+
+            // Brightness
+            float _BrightnessAmount;
+            float _BrightnessActive;
 
             fixed4 nonOptimizedBlurShader(fixed4 finalColor, float2 uv)
             {
@@ -85,6 +102,11 @@ Shader "Unlit/BlurShader"
                 return finalColor;
             }
 
+            fixed4 addBrightness(fixed4 finalColor, float brightnessAmount)
+            {
+                return finalColor * brightnessAmount;
+            }
+
             v2f vert (appdata v)
             {
                 v2f o;
@@ -97,17 +119,26 @@ Shader "Unlit/BlurShader"
             fixed4 frag (v2f i) : SV_Target
             {
                 float2 uv = i.uv;
-
                 fixed4 finalColor = tex2D(_MainTex, uv);
 
-                if(_Optimized)
+
+                if(_BrightnessActive)
                 {
-                    finalColor += optimizedBlurShader(finalColor, uv);
+                   finalColor += addBrightness(finalColor, _BrightnessAmount);
                 }
-                else
+                
+                if(_BlurActive)
                 {
-                    finalColor += nonOptimizedBlurShader(finalColor, uv);
+                    if(_Optimized)
+                    {
+                        finalColor += optimizedBlurShader(finalColor, uv);
+                    }
+                    else
+                    {
+                        finalColor += nonOptimizedBlurShader(finalColor, uv);
+                    }    
                 }
+
                 
                 
                 return finalColor * _BlendFactor;
